@@ -55,9 +55,10 @@ type Order struct {
 }
 
 type OrderProduct struct {
-	ID        uint64 `gorm:"primarykey" json:"id"`
-	OrderID   uint64
-	ProductID uint64
-	Quantity  uint32
-	IsReady   bool
+	ID          uint64 `gorm:"primarykey" json:"id"`
+	OrderID     uint64
+	ProductID   uint64
+	Quantity    uint32
+	IsReady     bool
+	IsDelivered bool
 }

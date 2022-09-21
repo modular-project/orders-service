@@ -3,6 +3,8 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/plutov/paypal/v4"
 )
@@ -17,12 +19,17 @@ func NewPaypalSerive(cltID, secret, api, sURL, bName string) (paypalService, err
 	if err != nil {
 		return paypalService{}, fmt.Errorf("paypal.NewClient: %w", err)
 	}
+	c.SetLog(os.Stdout) // Set log to terminal stdout
+	c.GetAccessToken(context.Background())
+	log.Println(c.Token)
 	ps := paypalService{
 		c: c,
 		appCtx: paypal.ApplicationContext{
 			BrandName: bName,
-			ReturnURL: fmt.Sprintf("%s/order/return", sURL),
-			CancelURL: fmt.Sprintf("%s/order/cancel", sURL),
+			ReturnURL: sURL,
+			CancelURL: fmt.Sprintf("%s/cancel.html", sURL),
+			// ReturnURL: fmt.Sprintf("https://example.com/return"),
+			// CancelURL: fmt.Sprintf("https://example.com/cancel"),
 		},
 	}
 	return ps, nil
@@ -31,7 +38,7 @@ func NewPaypalSerive(cltID, secret, api, sURL, bName string) (paypalService, err
 func (ps paypalService) CreateOrder(ctx context.Context, t float64) (string, error) {
 	pur := paypal.PurchaseUnitRequest{
 		ReferenceID: "ref-id",
-		Amount:      &paypal.PurchaseUnitAmount{Currency: "MXN", Value: fmt.Sprint(t)},
+		Amount:      &paypal.PurchaseUnitAmount{Currency: "MXN", Value: fmt.Sprintf("%.2f", t)},
 	}
 	po, err := ps.c.CreateOrder(ctx, paypal.OrderIntentCapture, []paypal.PurchaseUnitRequest{pur}, nil, &ps.appCtx)
 	if err != nil {
@@ -40,36 +47,8 @@ func (ps paypalService) CreateOrder(ctx context.Context, t float64) (string, err
 	return po.ID, nil
 }
 
-// func (ps paypalService) CreateOrder(ctx context.Context, t float64) (string, error) {
-// 	var total float64
-// 	if o == nil {
-// 		return "", fmt.Errorf("nil order")
-// 	}
-// 	items := make([]paypal.Item, len(o))
-// 	pur := paypal.PurchaseUnitRequest{Amount: &paypal.PurchaseUnitAmount{Currency: "MXN"}}
-// 	for i := range o {
-// 		// Get product
-// 		p, err := ps.pr.Product(o[i].ProductID)
-// 		if err != nil {
-// 			return "", fmt.Errorf("product: %w", err)
-// 		}
-// 		// Add price to total
-// 		total += p.Price * float64(o[i].Quantity)
-// 		// Set product to item list
-// 		items[i].Name = p.Name
-// 		items[i].Quantity = fmt.Sprint(o[i].Quantity)
-// 		items[i].UnitAmount = &paypal.Money{Currency: "MXN", Value: fmt.Sprint(p.Price)}
-// 	}
-// 	pur.Items = items
-// 	pur.Amount.Value = fmt.Sprint(total)
-// 	po, err := ps.c.CreateOrder(ctx, paypal.OrderIntentCapture, []paypal.PurchaseUnitRequest{pur}, nil, &ps.appCtx)
-// 	if err != nil {
-// 		return "", fmt.Errorf("c.CreateOrder: %w", err)
-// 	}
-// 	return po.ID, nil
-// }
-
 func (ps paypalService) CaptureOrder(ctx context.Context, id string) (string, error) {
+	log.Println(id)
 	r, err := ps.c.CaptureOrder(ctx, id, paypal.CaptureOrderRequest{})
 	if err != nil {
 		return "", fmt.Errorf("c.CaptureOrder: %w", err)

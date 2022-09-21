@@ -11,6 +11,7 @@ import (
 	"github.com/modular-project/orders-service/adapter"
 	"github.com/modular-project/orders-service/controller"
 	"github.com/modular-project/orders-service/http/handler"
+	"github.com/modular-project/orders-service/model"
 	"github.com/modular-project/orders-service/storage"
 	pf "github.com/modular-project/protobuffers/order/order"
 	"google.golang.org/grpc"
@@ -110,6 +111,7 @@ func main() {
 	if err := storage.NewDB(newDBConn()); err != nil {
 		log.Fatalf("fatal at start db: %s", err)
 	}
+	storage.Migrate(&model.Order{}, &model.OrderProduct{})
 	ose := controller.NewOrderService(storage.NewOrderStorage())
 	oss := controller.NewOrderStatusService(storage.NewOrderStatusStorage(), newPaypalService())
 	env := "ORDER_HOST"

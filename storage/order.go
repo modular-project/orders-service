@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/modular-project/orders-service/model"
 	"gorm.io/gorm"
@@ -15,14 +16,6 @@ func NewOrderStorage() OrderStorage {
 	return OrderStorage{db: _db}
 }
 
-// func (os OrderStorage) Pay(oID uint64) error {
-// 	err := os.db.Model(&model.Order{Model: model.Model{ID: oID}}).Update("status_id", model.Pending).Error
-// 	if err != nil {
-// 		return fmt.Errorf("update status_id: %w", err)
-// 	}
-// 	return nil
-// }
-
 func (os OrderStorage) Complete(oID uint64) error {
 	err := os.db.Model(&model.Order{Model: model.Model{ID: oID}}).Update("status_id", model.Completed).Error
 	if err != nil {
@@ -31,10 +24,15 @@ func (os OrderStorage) Complete(oID uint64) error {
 	return nil
 }
 
-func (os OrderStorage) Kitchen(eID uint64) ([]model.OrderProduct, error) {
+func (os OrderStorage) Kitchen(eID, last uint64) ([]model.OrderProduct, error) {
 	var ps []model.OrderProduct
-	err := os.db.Model(&model.OrderProduct{}).Joins("LEFT JOIN orders as o ON o.id = order_products.order_id").
-		Where("o.establishment_id = ? AND order_products.is_ready = false AND o.status_id <> ?", eID, model.WithoutPay).Order("order_products.id").Find(&ps).Error
+	log.Println(last)
+	tx := os.db.Model(&model.OrderProduct{}).Joins("LEFT JOIN orders as o ON o.id = order_products.order_id").
+		Where("o.establishment_id = ? AND order_products.is_ready = false AND o.status_id <> ?", eID, model.WithoutPay)
+	if last > 0 {
+		tx.Where("order_products.id > ?", last)
+	}
+	err := tx.Order("order_products.id").Find(&ps).Error
 	if err != nil {
 		return nil, fmt.Errorf("find order products: %w", err)
 	}
@@ -70,7 +68,7 @@ func (os OrderStorage) Search(s *model.SearchOrder) ([]model.Order, error) {
 		tx = tx.Limit(s.Limit)
 	}
 	if s.Offset != 0 {
-		tx = tx.Offset(s.Limit)
+		tx = tx.Offset(s.Offset)
 	}
 	err := tx.Find(&o).Error
 	if err != nil {
@@ -79,10 +77,39 @@ func (os OrderStorage) Search(s *model.SearchOrder) ([]model.Order, error) {
 	return o, nil
 }
 
+func (os OrderStorage) User(uID uint64, limit, offset int) ([]model.Order, error) {
+	tx := os.db.Preload("OrderProducts", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id", "product_id", "quantity", "order_id")
+	}).Select("id", "address_id", "total", "status_id", "user_id", "pay_id", "created_at").Where("user_id = ?", uID)
+	if limit != 0 {
+		tx = tx.Limit(limit)
+	}
+	if offset != 0 {
+		tx = tx.Offset(offset)
+	}
+	var orders []model.Order
+	res := tx.Find(&orders)
+	if res.Error != nil {
+		return nil, fmt.Errorf("find: %w", res.Error)
+	}
+	return orders, nil
+}
+
 func (os OrderStorage) Waiter(wID uint64) ([]model.Order, error) {
 	var o []model.Order
 	err := os.db.Preload("OrderProducts", func(db *gorm.DB) *gorm.DB {
-		return db.Select("id", "product_id", "quantity", "order_id")
+		return db.Select("id", "product_id", "quantity", "order_id", "is_ready", "is_delivered")
+	}).Select("id", "table_id", "total").Where("employee_id = ? AND status_id = ?", wID, model.Pending).Find(&o).Error
+	if err != nil {
+		return nil, fmt.Errorf("find order products: %w", err)
+	}
+	return o, nil
+}
+
+func (os OrderStorage) WaiterPending(wID uint64) ([]model.Order, error) {
+	var o []model.Order
+	err := os.db.Preload("OrderProducts", func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_ready = true AND is_delivered = false").Select("id", "product_id", "quantity", "order_id", "is_ready", "is_delivered")
 	}).Select("id", "table_id").Where("employee_id = ? AND status_id = ?", wID, model.Pending).Find(&o).Error
 	if err != nil {
 		return nil, fmt.Errorf("find order products: %w", err)
