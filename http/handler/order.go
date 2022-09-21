@@ -10,15 +10,14 @@ import (
 
 type OrderServicer interface {
 	Products(oID uint64) ([]model.OrderProduct, error)
-	Create(o *model.Order) (uint64, error)
+	Create(*model.Order) ([]uint64, error)
 	AddProducts(oID uint64, total float64, ps []model.OrderProduct) ([]uint64, error)
-	Kitchen(kID uint64) ([]model.OrderProduct, error)
+	Kitchen(kID, last uint64) ([]model.OrderProduct, error)
 	Waiter(wID uint64) ([]model.Order, error)
+	WaiterPending(wID uint64) ([]model.Order, error)
 	Search(s *model.SearchOrder) ([]model.Order, error)
 	User(uID uint64, s model.SearchOrder) ([]model.Order, error)
 	Establishment(uID uint64, s model.SearchOrder) ([]model.Order, error)
-	// Pay(uint64, model.Type, model.PaymentMethod) (string, error)
-	// Capture(string) error
 }
 
 type OrderUC struct {
@@ -30,10 +29,10 @@ func NewOrderUC(os OrderServicer) OrderUC {
 	return OrderUC{os: os}
 }
 
-func (ouc OrderUC) CreateLocalOrder(c context.Context, o *pf.Order) (*pf.ID, error) {
+func (ouc OrderUC) CreateLocalOrder(c context.Context, o *pf.Order) (*pf.CreateResponse, error) {
 	lo := o.GetLocalOrder()
 	if lo == nil {
-		return nil, fmt.Errorf("local order is nil")
+		return &pf.CreateResponse{}, fmt.Errorf("local order is nil")
 	}
 	mo := model.Order{
 		TypeID:          model.Local,
@@ -52,27 +51,28 @@ func (ouc OrderUC) CreateLocalOrder(c context.Context, o *pf.Order) (*pf.ID, err
 			Quantity:  o.OrderProducts[i].Quantity,
 		}
 	}
-	oID, err := ouc.os.Create(&mo)
+	ids, err := ouc.os.Create(&mo)
 	if err != nil {
-		return nil, fmt.Errorf("os.create: %w", err)
+		return &pf.CreateResponse{}, fmt.Errorf("os.create: %w", err)
 	}
-	return &pf.ID{Id: oID}, nil
+	return &pf.CreateResponse{OrderId: mo.ID, ProductIds: ids}, nil
 }
 
-func (ouc OrderUC) CreateDeliveryOrder(c context.Context, o *pf.Order) (*pf.ID, error) {
+func (ouc OrderUC) CreateDeliveryOrder(c context.Context, o *pf.Order) (*pf.CreateResponse, error) {
 	do := o.GetRemoteOrder()
 	if do == nil {
-		return nil, fmt.Errorf("delivery order is nil")
+		return &pf.CreateResponse{}, fmt.Errorf("delivery order is nil")
 	}
 	mo := model.Order{
 		UserID:        do.UserId,
 		TypeID:        model.Delivery,
 		StatusID:      model.WithoutPay,
 		OrderProducts: make([]model.OrderProduct, len(o.OrderProducts)),
+		AddressID:     &do.AddressId,
 		Total:         float64(o.Total),
 	}
 	if o.OrderProducts == nil {
-		return nil, fmt.Errorf("without products")
+		return &pf.CreateResponse{}, fmt.Errorf("without products")
 	}
 	for i := range o.OrderProducts {
 		mo.OrderProducts[i] = model.OrderProduct{
@@ -80,76 +80,98 @@ func (ouc OrderUC) CreateDeliveryOrder(c context.Context, o *pf.Order) (*pf.ID, 
 			Quantity:  o.OrderProducts[i].Quantity,
 		}
 	}
-	oID, err := ouc.os.Create(&mo)
+	ids, err := ouc.os.Create(&mo)
 	if err != nil {
-		return nil, fmt.Errorf("os.create: %w", err)
+		return &pf.CreateResponse{}, fmt.Errorf("os.create: %w", err)
 	}
-	return &pf.ID{Id: oID}, nil
+	return &pf.CreateResponse{OrderId: mo.ID, ProductIds: ids}, nil
 }
 
 func (ouc OrderUC) GetOrdersByUser(c context.Context, r *pf.OrdersByUserRequest) (*pf.OrdersResponse, error) {
 	if r == nil {
-		return nil, fmt.Errorf("nil request")
+		return &pf.OrdersResponse{}, fmt.Errorf("nil request")
 	}
 	if r.Search.Users == nil {
-		return nil, fmt.Errorf("nil user")
+		return &pf.OrdersResponse{}, fmt.Errorf("nil user")
 	}
 	o, err := ouc.os.User(r.Search.Users[0], newSearch(r.Search))
 	if err != nil {
-		return nil, fmt.Errorf("os.User: %w", err)
+		return &pf.OrdersResponse{}, fmt.Errorf("os.User: %w", err)
 	}
 	if o == nil {
-		return nil, nil
+		return &pf.OrdersResponse{}, nil
 	}
 	return &pf.OrdersResponse{Orders: protoOrder(o)}, nil
 }
 
-func (ouc OrderUC) GetOrdersByKitchen(c context.Context, id *pf.ID) (*pf.OrderProductsResponse, error) {
-	ops, err := ouc.os.Kitchen(id.Id)
+func (ouc OrderUC) GetOrdersByID(c context.Context, r *pf.GetOrderByIDRequest) (*pf.OrderResponse, error) {
+	if r == nil {
+		return &pf.OrderResponse{}, fmt.Errorf("nil request")
+	}
+	ps, err := ouc.os.Products(r.OrderId)
 	if err != nil {
-		return nil, fmt.Errorf("os.Kitchen: %w", err)
+		return &pf.OrderResponse{}, fmt.Errorf("os.User: %w", err)
+	}
+	if ps == nil {
+		return &pf.OrderResponse{}, nil
+	}
+	o := []model.Order{
+		{
+			OrderProducts: ps,
+		},
+	}
+	return &pf.OrderResponse{Order: protoOrder(o)[0]}, nil
+}
+
+func (ouc OrderUC) GetOrdersByKitchen(c context.Context, r *pf.RequestKitchen) (*pf.OrderProductsResponse, error) {
+	ops, err := ouc.os.Kitchen(r.Id, r.Last)
+	if err != nil {
+		return &pf.OrderProductsResponse{}, fmt.Errorf("os.Kitchen: %w", err)
 	}
 	if ops == nil {
-		return nil, nil
+		return &pf.OrderProductsResponse{}, nil
 	}
 	po := make([]*pf.OrderProduct, len(ops))
 	for i := range ops {
-		po[i].Id = ops[i].ID
-		po[i].IsReady = ops[i].IsReady
-		po[i].ProductId = ops[i].ProductID
-		po[i].Quantity = ops[i].Quantity
+		po[i] = &pf.OrderProduct{
+			Id:          ops[i].ID,
+			IsReady:     ops[i].IsReady,
+			ProductId:   ops[i].ProductID,
+			Quantity:    ops[i].Quantity,
+			IsDelivered: ops[i].IsDelivered,
+		}
 	}
 	return &pf.OrderProductsResponse{OrderProducts: po}, nil
 }
 
 func (ouc OrderUC) GetOrders(c context.Context, r *pf.OrdersRequest) (*pf.OrdersResponse, error) {
 	if r == nil {
-		return nil, fmt.Errorf("nil request")
+		return &pf.OrdersResponse{}, fmt.Errorf("nil request")
 	}
 	s := newSearch(r.Search)
 	os, err := ouc.os.Search(&s)
 	if err != nil {
-		return nil, fmt.Errorf("os.Search(): %w", err)
+		return &pf.OrdersResponse{}, fmt.Errorf("os.Search(): %w", err)
 	}
 	if os == nil {
-		return nil, nil
+		return &pf.OrdersResponse{}, nil
 	}
 	return &pf.OrdersResponse{Orders: protoOrder(os)}, nil
 }
 
 func (ouc OrderUC) GetOrdersByEstablishment(c context.Context, r *pf.OrdersRequest) (*pf.OrdersResponse, error) {
 	if r == nil {
-		return nil, fmt.Errorf("nil request")
+		return &pf.OrdersResponse{}, fmt.Errorf("nil request")
 	}
 	if r.Search.Establishments == nil {
-		return nil, fmt.Errorf("nil establishment")
+		return &pf.OrdersResponse{}, fmt.Errorf("nil establishment")
 	}
 	os, err := ouc.os.Establishment(r.Search.Establishments[0], newSearch(r.Search))
 	if err != nil {
-		return nil, fmt.Errorf("os.Establishment: %w", err)
+		return &pf.OrdersResponse{}, fmt.Errorf("os.Establishment: %w", err)
 	}
 	if os == nil {
-		return nil, nil
+		return &pf.OrdersResponse{}, nil
 	}
 	return &pf.OrdersResponse{Orders: protoOrder(os)}, nil
 }
@@ -157,34 +179,35 @@ func (ouc OrderUC) GetOrdersByEstablishment(c context.Context, r *pf.OrdersReque
 func (ouc OrderUC) GetOrderByWaiter(c context.Context, id *pf.ID) (*pf.OrdersResponse, error) {
 	os, err := ouc.os.Waiter(id.Id)
 	if err != nil {
-		return nil, fmt.Errorf("os.Waiter: %w", err)
+		return &pf.OrdersResponse{}, fmt.Errorf("os.Waiter: %w", err)
 	}
 	if os == nil {
-		return nil, nil
+		return &pf.OrdersResponse{}, nil
+	}
+	return &pf.OrdersResponse{Orders: protoOrder(os)}, nil
+}
+
+func (ouc OrderUC) GetOrderPendingByWaiter(c context.Context, id *pf.ID) (*pf.OrdersResponse, error) {
+	os, err := ouc.os.WaiterPending(id.Id)
+	if err != nil {
+		return &pf.OrdersResponse{}, fmt.Errorf("os.WaiterPending: %w", err)
+	}
+	if os == nil {
+		return &pf.OrdersResponse{}, nil
 	}
 	return &pf.OrdersResponse{Orders: protoOrder(os)}, nil
 }
 
 func (ouc OrderUC) AddProductsToOrder(c context.Context, r *pf.AddProductsToOrderRequest) (*pf.AddProductsToOrderResponse, error) {
 	if r == nil {
-		return nil, fmt.Errorf("nil request")
+		return &pf.AddProductsToOrderResponse{}, fmt.Errorf("nil request")
 	}
 	ids, err := ouc.os.AddProducts(r.Id, float64(r.Total), orderProducts(r.Products))
 	if err != nil {
-		return nil, fmt.Errorf("os.AddProducts: %w", err)
+		return &pf.AddProductsToOrderResponse{}, fmt.Errorf("os.AddProducts: %w", err)
 	}
 	return &pf.AddProductsToOrderResponse{Ids: ids}, nil
 }
-
-// func (ouc OrderUC) Capture(c context.Context, r *pf.CapturePaymentRequest) (*pf.CapturePaymentResponse, error) {
-// 	if r == nil {
-// 		return nil, fmt.Errorf("nil request")
-// 	}
-// 	if err := ouc.os.Capture(r.Id); err != nil {
-// 		return nil, fmt.Errorf("os.Capture: %w", err)
-// 	}
-// 	return &pf.CapturePaymentResponse{}, nil
-// }
 
 func newOrderBy(s []*pf.SearchBy) []model.OrderBy {
 	if s == nil {
@@ -261,13 +284,20 @@ func protoOrder(os []model.Order) []*pf.Order {
 			Total:           float32(t.Total),
 			Status:          pf.Status(t.StatusID),
 			OrderProducts:   make([]*pf.OrderProduct, len(t.OrderProducts)),
+			CreateAt:        uint64(t.CreatedAt.Unix()),
+		}
+		if t.UserID != 0 {
+			po[i].Type = &pf.Order_RemoteOrder{RemoteOrder: &pf.RemoteOrder{UserId: t.UserID, AddressId: *t.AddressID}}
+		} else {
+			po[i].Type = &pf.Order_LocalOrder{LocalOrder: &pf.LocalOrder{EmployeeId: t.EmployeeID, TableId: t.TableID}}
 		}
 		for y := range t.OrderProducts {
 			po[i].OrderProducts[y] = &pf.OrderProduct{
-				Id:        t.OrderProducts[y].ID,
-				ProductId: t.OrderProducts[y].ProductID,
-				Quantity:  t.OrderProducts[y].Quantity,
-				IsReady:   t.OrderProducts[y].IsReady,
+				Id:          t.OrderProducts[y].ID,
+				ProductId:   t.OrderProducts[y].ProductID,
+				Quantity:    t.OrderProducts[y].Quantity,
+				IsReady:     t.OrderProducts[y].IsReady,
+				IsDelivered: t.OrderProducts[y].IsDelivered,
 			}
 		}
 	}

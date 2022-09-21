@@ -19,6 +19,7 @@ type OrderStatusStorager interface {
 	PayLocal(oID, eID uint64) error
 	PayDelivey(string) error
 	CompleteProduct(uint64) error
+	DeliverProduct([]uint64) error
 }
 
 type OrderStatusService struct {
@@ -28,6 +29,13 @@ type OrderStatusService struct {
 
 func NewOrderStatusService(ost OrderStatusStorager, ps PaypalServicer) OrderStatusService {
 	return OrderStatusService{ost: ost, ps: ps}
+}
+
+func (oss OrderStatusService) DeliverProduct(ids []uint64) error {
+	if err := oss.ost.DeliverProduct(ids); err != nil {
+		return fmt.Errorf("ost.DeliverProduct: %w", err)
+	}
+	return nil
 }
 
 func (oss OrderStatusService) PayDelivery(c context.Context, oID uint64, uID uint64, eID uint64, aID string, pm model.PaymentMethod) (string, error) {

@@ -249,7 +249,7 @@ func TestOrderStorage_Kitchen(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.os.Kitchen(uint64(tt.giveID))
+			got, err := tt.os.Kitchen(uint64(tt.giveID), 0)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("OrderStorage.Kitchen() error = %v, wantErr %v", err, tt.wantErr)
 				return
