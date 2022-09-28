@@ -16,6 +16,8 @@ import (
 	pf "github.com/modular-project/protobuffers/order/order"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
 )
 
@@ -131,8 +133,13 @@ func main() {
 	ouc := handler.NewOrderUC(ose)
 	osuc := handler.NewOrderStatusUC(oss)
 	srv := startGRPC()
+	healthServer := health.NewServer()
+	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 	pf.RegisterOrderServiceServer(srv, ouc)
+	healthServer.SetServingStatus(pf.OrderService_ServiceDesc.ServiceName, healthpb.HealthCheckResponse_SERVING)
 	pf.RegisterOrderStatusServiceServer(srv, osuc)
+	healthServer.SetServingStatus(pf.OrderStatusService_ServiceDesc.ServiceName, healthpb.HealthCheckResponse_SERVING)
+	healthpb.RegisterHealthServer(srv, healthServer)
 	log.Printf("Order server started at %s:%s", host, port)
 	err = srv.Serve(lis)
 	if err != nil {
