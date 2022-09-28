@@ -55,7 +55,7 @@ spec:
             secretKeyRef:
               name: order-secret
               key: pp_secret
-        - name: pp_API
+        - name: PP_API
           valueFrom:
             secretKeyRef:
               name: order-secret
