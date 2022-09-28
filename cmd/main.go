@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
 
@@ -116,17 +117,12 @@ func main() {
 	storage.Migrate(&model.Order{}, &model.OrderProduct{})
 	ose := controller.NewOrderService(storage.NewOrderStorage())
 	oss := controller.NewOrderStatusService(storage.NewOrderStatusStorage(), newPaypalService())
-	env := "ORDER_HOST"
-	host, f := os.LookupEnv(env)
-	if !f {
-		log.Fatalf("environment variable (%s) not found", env)
-	}
-	env = "ORDER_PORT"
+	env := "ORDER_PORT"
 	port, f := os.LookupEnv(env)
 	if !f {
 		log.Fatalf("environment variable (%s) not found", env)
 	}
-	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", host, port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -139,10 +135,11 @@ func main() {
 	healthServer.SetServingStatus(pf.OrderService_ServiceDesc.ServiceName, healthpb.HealthCheckResponse_SERVING)
 	pf.RegisterOrderStatusServiceServer(srv, osuc)
 	healthServer.SetServingStatus(pf.OrderStatusService_ServiceDesc.ServiceName, healthpb.HealthCheckResponse_SERVING)
+	reflection.Register(srv)
 	healthpb.RegisterHealthServer(srv, healthServer)
-	log.Printf("Order server started at %s:%s", host, port)
+	log.Printf("Order server started at :%s", port)
 	err = srv.Serve(lis)
 	if err != nil {
-		log.Fatalf("failed to server at %s:%s, got error: %s", host, port, err)
+		log.Fatalf("failed to server at :%s, got error: %s", port, err)
 	}
 }
