@@ -90,7 +90,7 @@ spec:
           # Enable structured logging with LogEntry format:
           - "--structured-logs"
           - "--port=5432"
-          - "woven-fountain-359423:northamerica-northeast1:modular-pc"
+          - "woven-fountain-359423:northamerica-northeast1:modular-db-instance"
         
         securityContext:
           runAsNonRoot: true
