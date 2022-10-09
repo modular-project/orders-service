@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/modular-project/orders-service/model"
 	"gorm.io/gorm"
@@ -15,9 +14,16 @@ type orderStatusStorage struct {
 func NewOrderStatusStorage() orderStatusStorage {
 	return orderStatusStorage{db: _db}
 }
+
+func (os orderStatusStorage) CancelOrders(ids []uint64, uID uint64) error {
+	if err := os.db.Delete(&model.Order{}, "user_id = ? AND status_id = ?", uID, model.WithoutPay).Error; err != nil {
+		return fmt.Errorf("storage CancelOrders: %w", err)
+	}
+	return nil
+}
+
 func (os orderStatusStorage) TotalPrice(oID uint64, uID uint64) (float64, error) {
 	o := model.Order{}
-	log.Print("oRDER ID: ", oID, "User ID: ", uID)
 	if err := os.db.Where("id = ? AND user_id = ?", oID, uID).Select("total").First(&o).Error; err != nil {
 		return 0, fmt.Errorf("first order: %w", err)
 	}

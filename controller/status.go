@@ -20,6 +20,7 @@ type OrderStatusStorager interface {
 	PayDelivey(string) error
 	CompleteProduct(uint64) error
 	DeliverProduct([]uint64) error
+	CancelOrders([]uint64, uint64) error
 }
 
 type OrderStatusService struct {
@@ -29,6 +30,13 @@ type OrderStatusService struct {
 
 func NewOrderStatusService(ost OrderStatusStorager, ps PaypalServicer) OrderStatusService {
 	return OrderStatusService{ost: ost, ps: ps}
+}
+
+func (oss OrderStatusService) CancelOrders(ids []uint64, uID uint64) error {
+	if err := oss.ost.CancelOrders(ids, uID); err != nil {
+		return fmt.Errorf("controller CancelOrders: %w", err)
+	}
+	return nil
 }
 
 func (oss OrderStatusService) DeliverProduct(ids []uint64) error {

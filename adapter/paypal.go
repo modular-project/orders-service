@@ -21,7 +21,10 @@ func NewPaypalSerive(cltID, secret, api, sURL, bName string) (paypalService, err
 	}
 	c.SetLog(os.Stdout) // Set log to terminal stdout
 	c.GetAccessToken(context.Background())
-	log.Println(c.Token)
+	// log.Println(c.Token)
+	if sURL == "localhost" {
+		sURL = `https://example.com`
+	}
 	ps := paypalService{
 		c: c,
 		appCtx: paypal.ApplicationContext{

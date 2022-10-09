@@ -14,6 +14,7 @@ type OrderStatusServicer interface {
 	CompleteProduct(uint64) error
 	DeliverProduct([]uint64) error
 	CapturePayment(context.Context, string) (string, error)
+	CancelOrders([]uint64, uint64) error
 }
 
 type OrderStatusUC struct {
@@ -23,6 +24,17 @@ type OrderStatusUC struct {
 
 func NewOrderStatusUC(oss OrderStatusServicer) OrderStatusUC {
 	return OrderStatusUC{oss: oss}
+}
+
+func (ouc OrderStatusUC) CancelOrders(c context.Context, r *pf.CancelOrdersRequest) (*pf.CancelOrdersResponse, error) {
+	if r == nil {
+		return &pf.CancelOrdersResponse{}, fmt.Errorf("nil request")
+	}
+	err := ouc.oss.CancelOrders(r.Ids, r.UserId)
+	if err != nil {
+		return &pf.CancelOrdersResponse{}, fmt.Errorf("oss.PayDelivery: %w", err)
+	}
+	return &pf.CancelOrdersResponse{}, nil
 }
 
 func (ouc OrderStatusUC) PayDelivery(c context.Context, r *pf.PayDeliveryRequest) (*pf.PayDeliveryResponse, error) {

@@ -88,7 +88,7 @@ func (os OrderStorage) User(uID uint64, limit, offset int) ([]model.Order, error
 		tx = tx.Offset(offset)
 	}
 	var orders []model.Order
-	res := tx.Find(&orders)
+	res := tx.Order("id DESC").Find(&orders)
 	if res.Error != nil {
 		return nil, fmt.Errorf("find: %w", res.Error)
 	}
