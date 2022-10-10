@@ -104,7 +104,7 @@ func (ouc OrderUC) GetOrdersByUser(c context.Context, r *pf.OrdersByUserRequest)
 	return &pf.OrdersResponse{Orders: protoOrder(o)}, nil
 }
 
-func (ouc OrderUC) GetOrdersByID(c context.Context, r *pf.GetOrderByIDRequest) (*pf.OrderResponse, error) {
+func (ouc OrderUC) GetOrderByID(c context.Context, r *pf.GetOrderByIDRequest) (*pf.OrderResponse, error) {
 	if r == nil {
 		return &pf.OrderResponse{}, fmt.Errorf("nil request")
 	}
