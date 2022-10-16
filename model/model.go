@@ -51,6 +51,7 @@ type Order struct {
 	StatusID        Status
 	Total           float64
 	PayID           *string
+	Tip             float32 `gorm:"not null;default:0;"`
 	OrderProducts   []OrderProduct
 }
 

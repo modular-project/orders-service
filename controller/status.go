@@ -16,7 +16,7 @@ type PaypalServicer interface {
 type OrderStatusStorager interface {
 	TotalPrice(oID, uID uint64) (float64, error)
 	SetPaymentDelivery(oID, eID uint64, pID, aID string) error
-	PayLocal(oID, eID uint64) error
+	PayLocal(oID, eID uint64, tip float32) error
 	PayDelivey(string) error
 	CompleteProduct(uint64) error
 	DeliverProduct([]uint64) error
@@ -65,11 +65,11 @@ func (oss OrderStatusService) PayDelivery(c context.Context, oID uint64, uID uin
 
 }
 
-func (oss OrderStatusService) PayLocal(oID uint64, eID uint64, pm model.PaymentMethod) error {
+func (oss OrderStatusService) PayLocal(oID uint64, eID uint64, pm model.PaymentMethod, tip float32) error {
 	if pm != model.CASH {
 		return fmt.Errorf("payment method must be cash")
 	}
-	if err := oss.ost.PayLocal(oID, eID); err != nil {
+	if err := oss.ost.PayLocal(oID, eID, tip); err != nil {
 		return fmt.Errorf("ost.PayLocal: %w", err)
 	}
 	return nil

@@ -42,8 +42,8 @@ func (os orderStatusStorage) SetPaymentDelivery(oID uint64, eID uint64, pID stri
 	return nil
 }
 
-func (os orderStatusStorage) PayLocal(oID uint64, eID uint64) error {
-	err := os.db.Model(&model.Order{}).Where("id = ? AND employee_id = ?", oID, eID).Update("status_id", model.Completed).Error
+func (os orderStatusStorage) PayLocal(oID uint64, eID uint64, tip float32) error {
+	err := os.db.Model(&model.Order{}).Where("id = ? AND employee_id = ?", oID, eID).Updates(map[string]interface{}{"status_id": model.Completed, "tip": tip}).Error
 	if err != nil {
 		return fmt.Errorf("update order status: %w", err)
 	}

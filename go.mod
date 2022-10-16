@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
-	github.com/modular-project/protobuffers v0.0.0-20221008232657-e7cb0740589a
+	github.com/modular-project/protobuffers v0.0.0-20221015023521-5179e26c51fd
 	github.com/plutov/paypal/v4 v4.6.2
 	github.com/stretchr/testify v1.8.0
 	google.golang.org/grpc v1.46.2

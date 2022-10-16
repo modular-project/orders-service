@@ -10,7 +10,7 @@ import (
 
 type OrderStatusServicer interface {
 	PayDelivery(c context.Context, oID, uID, eID uint64, aID string, pm model.PaymentMethod) (string, error)
-	PayLocal(oID, eID uint64, pm model.PaymentMethod) error
+	PayLocal(oID, eID uint64, pm model.PaymentMethod, tip float32) error
 	CompleteProduct(uint64) error
 	DeliverProduct([]uint64) error
 	CapturePayment(context.Context, string) (string, error)
@@ -52,7 +52,7 @@ func (ouc OrderStatusUC) PayLocal(c context.Context, r *pf.PayLocalRequest) (*pf
 	if r == nil {
 		return &pf.PayLocalResponse{}, fmt.Errorf("nil request")
 	}
-	if err := ouc.oss.PayLocal(r.OrdeId, r.EmployeeId, model.PaymentMethod(r.Payment)); err != nil {
+	if err := ouc.oss.PayLocal(r.OrdeId, r.EmployeeId, model.PaymentMethod(r.Payment), r.Tip); err != nil {
 		return &pf.PayLocalResponse{}, fmt.Errorf("oss.PayDelivery: %w", err)
 	}
 	return &pf.PayLocalResponse{}, nil

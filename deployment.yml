@@ -18,10 +18,10 @@ spec:
         resources:
           requests:
             memory: "64Mi"
-            cpu: "10m"
+            cpu: "30m"
           limits:
             memory: "64Mi"
-            cpu: "20m"
+            cpu: "30m"
         ports:
         - containerPort: 3004
           protocol: TCP

@@ -18,6 +18,7 @@ type OrderStorager interface {
 	Pay(uint64, float64) error
 	SetPayment(uint64, float64, string) error
 	User(uID uint64, limit, offset int) ([]model.Order, error)
+	GetTipsFromEmployee(eID uint64, start, end string) (float32, error)
 }
 
 type OrderService struct {
@@ -48,6 +49,14 @@ func (os OrderService) Create(o *model.Order) ([]uint64, error) {
 		ids[i] = o.OrderProducts[i].ID
 	}
 	return ids, nil
+}
+
+func (os OrderService) GetTipsFromEmployee(eID uint64, start, end string) (float32, error) {
+	tips, err := os.str.GetTipsFromEmployee(eID, start, end)
+	if err != nil {
+		return 0, fmt.Errorf("controller GetTipsFromEmployee: %w", err)
+	}
+	return tips, nil
 }
 
 func (os OrderService) AddProducts(oID uint64, total float64, ps []model.OrderProduct) ([]uint64, error) {

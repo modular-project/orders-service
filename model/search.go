@@ -38,6 +38,8 @@ type SearchOrder struct {
 	Types  []Type
 	Lower  float64
 	Higher float64
+	Start  string
+	End    string
 }
 
 func (o OrderBy) get() string {

@@ -41,7 +41,7 @@ func (os OrderStorage) Kitchen(eID, last uint64) ([]model.OrderProduct, error) {
 
 func (os OrderStorage) Search(s *model.SearchOrder) ([]model.Order, error) {
 	var o []model.Order
-	tx := os.db.Model(&o).Select("id, type_id, establishment_id, address_id, status_id, total, created_at")
+	tx := os.db.Model(&o).Select("id, type_id, establishment_id, address_id, status_id, total, created_at, user_id")
 	if s.Users != nil {
 		tx.Where("user_id IN ?", s.Users)
 	}
@@ -60,6 +60,9 @@ func (os OrderStorage) Search(s *model.SearchOrder) ([]model.Order, error) {
 	if s.Higher > 0 {
 		tx.Where("total <= ?", s.Higher)
 	}
+	if s.Start != "" && s.End != "" {
+		tx.Where("(created_at, created_at) OVERLAPS (?, ?)", fmt.Sprintf("%s 05:00:00", s.Start), fmt.Sprintf("%s 05:00:00", s.End))
+	}
 	q := s.Query()
 	if q != "" {
 		tx = tx.Order(s.Query())
@@ -75,6 +78,17 @@ func (os OrderStorage) Search(s *model.SearchOrder) ([]model.Order, error) {
 		return nil, fmt.Errorf("find orders: %w", err)
 	}
 	return o, nil
+}
+
+func (os OrderStorage) GetTipsFromEmployee(eID uint64, start, end string) (float32, error) {
+	var sum float32
+	err := os.db.Table("orders").Where(`created_at BETWEEN ? AND ?`, fmt.Sprintf("%s 05:00:00", start), fmt.Sprintf("%s 05:00:00", end)).
+		Where("employee_id = ?", eID).Select("sum(total * tip)").Row().Scan(&sum)
+	// TODO CHECK TIMEZONE, CURRENLY IN CDT
+	if err != nil {
+		return 0, fmt.Errorf("failed tu get tips between (%s, %s): %w", start, end, err)
+	}
+	return sum, nil
 }
 
 func (os OrderStorage) User(uID uint64, limit, offset int) ([]model.Order, error) {

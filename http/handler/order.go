@@ -18,6 +18,7 @@ type OrderServicer interface {
 	Search(s *model.SearchOrder) ([]model.Order, error)
 	User(uID uint64, s model.SearchOrder) ([]model.Order, error)
 	Establishment(uID uint64, s model.SearchOrder) ([]model.Order, error)
+	GetTipsFromEmployee(eID uint64, start, end string) (float32, error)
 }
 
 type OrderUC struct {
@@ -41,6 +42,7 @@ func (ouc OrderUC) CreateLocalOrder(c context.Context, o *pf.Order) (*pf.CreateR
 		TableID:         lo.TableId,
 		StatusID:        model.Pending,
 		Total:           float64(o.Total),
+		Tip:             lo.Tip,
 	}
 	if o.OrderProducts != nil {
 		mo.OrderProducts = make([]model.OrderProduct, len(o.OrderProducts))
@@ -56,6 +58,14 @@ func (ouc OrderUC) CreateLocalOrder(c context.Context, o *pf.Order) (*pf.CreateR
 		return &pf.CreateResponse{}, fmt.Errorf("os.create: %w", err)
 	}
 	return &pf.CreateResponse{OrderId: mo.ID, ProductIds: ids}, nil
+}
+
+func (ouc OrderUC) GetTips(c context.Context, r *pf.GetTipsRequest) (*pf.GetTipsResponse, error) {
+	tips, err := ouc.os.GetTipsFromEmployee(r.EmployeeId, r.Start, r.End)
+	if err != nil {
+		return &pf.GetTipsResponse{}, fmt.Errorf("handler GetTips: %w", err)
+	}
+	return &pf.GetTipsResponse{Tips: tips}, nil
 }
 
 func (ouc OrderUC) CreateDeliveryOrder(c context.Context, o *pf.Order) (*pf.CreateResponse, error) {
@@ -226,6 +236,8 @@ func newSearch(ps *pf.SearchOrders) model.SearchOrder {
 		return model.SearchOrder{}
 	}
 	s := model.SearchOrder{
+		Start: ps.Start,
+		End:   ps.End,
 		Ests:  ps.Establishments,
 		Users: ps.Users,
 	}

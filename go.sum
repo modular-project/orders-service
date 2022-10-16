@@ -155,6 +155,14 @@ github.com/modular-project/protobuffers v0.0.0-20221008232133-b3be68957051 h1:L+
 github.com/modular-project/protobuffers v0.0.0-20221008232133-b3be68957051/go.mod h1:A6qBaXQhNp1BNqSqi4IbpNQ17cjdB8qEpYeJKaslnOw=
 github.com/modular-project/protobuffers v0.0.0-20221008232657-e7cb0740589a h1:8FyAefHBTxZVmMA3GcyOhZEUgZjb+DSvJkJEnzwAcxo=
 github.com/modular-project/protobuffers v0.0.0-20221008232657-e7cb0740589a/go.mod h1:A6qBaXQhNp1BNqSqi4IbpNQ17cjdB8qEpYeJKaslnOw=
+github.com/modular-project/protobuffers v0.0.0-20221014154656-c27e39b3a4f4 h1:z9JFEdiM1ob/33rhOBylnLMlYc7+7dbJhDQPW3Gqcz8=
+github.com/modular-project/protobuffers v0.0.0-20221014154656-c27e39b3a4f4/go.mod h1:A6qBaXQhNp1BNqSqi4IbpNQ17cjdB8qEpYeJKaslnOw=
+github.com/modular-project/protobuffers v0.0.0-20221014155317-b07cbdf051aa h1:XVZxdjvez4Hbx/jhp7r6KLEDwMMgbB7FLagqZAvSfEA=
+github.com/modular-project/protobuffers v0.0.0-20221014155317-b07cbdf051aa/go.mod h1:A6qBaXQhNp1BNqSqi4IbpNQ17cjdB8qEpYeJKaslnOw=
+github.com/modular-project/protobuffers v0.0.0-20221014155941-cced1198c9b5 h1:caGNKIwQINeTzIoWeMRJGsj5NNn/s1P55UlcdArTXHk=
+github.com/modular-project/protobuffers v0.0.0-20221014155941-cced1198c9b5/go.mod h1:A6qBaXQhNp1BNqSqi4IbpNQ17cjdB8qEpYeJKaslnOw=
+github.com/modular-project/protobuffers v0.0.0-20221015023521-5179e26c51fd h1:WmjovR2SBTlE/IJ2JE8hnltlp7Hk+/QqoP1CXQuplJA=
+github.com/modular-project/protobuffers v0.0.0-20221015023521-5179e26c51fd/go.mod h1:A6qBaXQhNp1BNqSqi4IbpNQ17cjdB8qEpYeJKaslnOw=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
