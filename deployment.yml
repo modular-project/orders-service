@@ -59,7 +59,7 @@ spec:
               name: order-secret
               key: pp_api
         - name: FRONT_HOST
-          value: http://34.160.186.92
+          value: https://puntoycoma.works
         - name: ORDER_DB_HOST
           value: localhost
         - name: ORDER_DB_PORT
